@@ -143,13 +143,25 @@ $steps = array(
 		'worker' => function () {
 			// Create tmp home
 			$composerHome = dirname(__FILE__).DIRECTORY_SEPARATOR.'composer';
-			mkdir($composerHome);
+			if (!is_dir($composerHome)) {
+				mkdir($composerHome);
+			}
+
+			$phpPath = 'php';
+			if (stristr(PHP_OS, 'WIN')) { // Workaround for WAMP
+				$wampPhpPath = 'C:\wamp\bin\php\php'.PHP_VERSION.'\php.exe';
+				if (file_exists($wampPhpPath)) {
+					$phpPath = $wampPhpPath;
+				}
+			} 
 
 			putenv('COMPOSER_HOME='.$composerHome);
-			exec('php composer.phar -n install', $output, $returnVal);
+
+			// Prefer dist because sometimes Git is not installed (especially on Windows)
+			exec($phpPath.' composer.phar -n --prefer-dist install', $output, $returnVal);
 
 			if ($returnVal != 0) { // Something went wrong
-				throw new Exception('Cannot install Lighp dependencies ['.$returnVal.']:'."\n".implode("\n", $output));
+				throw new Exception('Cannot install Lighp dependencies ['.$returnVal.']:<pre>'."\n".implode("\n", $output).'</pre>');
 			}
 
 			// Composer creates .htaccess sometimes, with "Deny from all" in it
