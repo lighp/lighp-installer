@@ -29,6 +29,10 @@ function defaultRoot() {
 	return $path;
 }
 
+function defaultDownloadUrl() {
+	return 'https://github.com/lighp/lighp/archive/master.zip';
+}
+
 function tmpPath() {
 	return tempnam(sys_get_temp_dir(), 'lighp');
 }
@@ -97,11 +101,15 @@ function xrm($file) {
 	return true;
 }
 
+function pkgsInstalled() {
+	return file_exists(dirname(__FILE__).DIRECTORY_SEPARATOR.'composer.lock');
+}
+
 $steps = array(
 	array(
 		'description' => 'Downloading and extracting Lighp...',
 		'worker' => function () {
-			$downloadUrl = 'https://github.com/lighp/lighp/archive/master.zip';
+			$downloadUrl = $_GET['downloadUrl'];
 			$zipPath = tmpPath();
 			$destPath = dirname(__FILE__);
 
@@ -130,6 +138,10 @@ $steps = array(
 	array(
 		'description' => 'Downloading Composer...',
 		'worker' => function () {
+			if (pkgsInstalled() && (!isset($_GET['updatePkgs']) || $_GET['updatePkgs'] != 'on')) {
+				return;
+			}
+
 			$downloadUrl = 'https://getcomposer.org/composer.phar';
 			$destPath = dirname(__FILE__).DIRECTORY_SEPARATOR.'composer.phar';
 
@@ -141,27 +153,19 @@ $steps = array(
 	array(
 		'description' => 'Downloading Lighp dependencies (this might take some time)...',
 		'worker' => function () {
-			// Create tmp home
-			$composerHome = dirname(__FILE__).DIRECTORY_SEPARATOR.'composer';
-			if (!is_dir($composerHome)) {
-				mkdir($composerHome);
+			if (pkgsInstalled() && (!isset($_GET['updatePkgs']) || $_GET['updatePkgs'] != 'on')) {
+				return;
 			}
 
-			$phpPath = 'php';
-			if (stristr(PHP_OS, 'WIN')) { // Workaround for WAMP
-				$wampPhpPath = 'C:\wamp\bin\php\php'.PHP_VERSION.'\php.exe';
-				if (file_exists($wampPhpPath)) {
-					$phpPath = $wampPhpPath;
-				}
-			} 
+			// Create tmp home
+			$composerHome = dirname(__FILE__).DIRECTORY_SEPARATOR.'composer';
+			mkdir($composerHome);
 
 			putenv('COMPOSER_HOME='.$composerHome);
-
-			// Prefer dist because sometimes Git is not installed (especially on Windows)
-			exec($phpPath.' composer.phar -n --prefer-dist install', $output, $returnVal);
+			exec('php composer.phar -n install', $output, $returnVal);
 
 			if ($returnVal != 0) { // Something went wrong
-				throw new Exception('Cannot install Lighp dependencies ['.$returnVal.']:<pre>'."\n".implode("\n", $output).'</pre>');
+				throw new Exception('Cannot install Lighp dependencies ['.$returnVal.']:'."\n".implode("\n", $output));
 			}
 
 			// Composer creates .htaccess sometimes, with "Deny from all" in it
@@ -220,7 +224,7 @@ $nextStep = function () use(&$view, &$steps, $currentStep) {
 	$view['redirect'] = '?'.http_build_query($data);
 };
 
-if (isset($_GET['install'])) {
+if (isset($_GET['install']) && (int) $_GET['install']) {
 	$view['installing?'] = true;
 	$view['step'] = $currentStep + 1;
 	$view['progress'] = round($view['step'] / count($steps) * 100);
@@ -303,17 +307,42 @@ if (isset($_GET['root'])) {
 					</div>
 				</div>
 
-				<div class="form-group">
-					<label for="root" class="col-sm-2 control-label">Root path</label>
-					<div class="col-sm-10">
-						<input type="text" class="form-control" id="root" name="root" placeholder="Root path" value="<?php echo defaultRoot(); ?>">
-						<span class="help-block">Leave this value as is if you don't know what it is.</span>
+				<div id="demo" class="collapse out">
+					<br>
+
+					<div class="form-group">
+						<label for="root" class="col-sm-2 control-label">Root path</label>
+						<div class="col-sm-10">
+							<input type="text" class="form-control" id="root" name="root" placeholder="Root path" value="<?php echo defaultRoot(); ?>">
+							<span class="help-block">Leave this value as is if you don't know what it is.</span>
+						</div>
+					</div>
+
+					<div class="form-group">
+						<label for="downloadUrl" class="col-sm-2 control-label">Download URL</label>
+						<div class="col-sm-10">
+							<input type="url" class="form-control" id="downloadUrl" name="downloadUrl" placeholder="Download URL" value="<?php echo defaultDownloadUrl(); ?>">
+							<span class="help-block">URL to the zipball of Lighp.</span>
+						</div>
+					</div>
+
+					<div class="form-group">
+						<div class="col-sm-offset-2 col-sm-10">
+							<div class="checkbox">
+								<label>
+									<input type="checkbox" name="updatePkgs"> Update packages if they are already installed
+								</label>
+							</div>
+						</div>
 					</div>
 				</div>
 
 				<div class="form-group">
 					<div class="col-sm-offset-2 col-sm-10">
 						<button type="submit" class="btn btn-lg btn-primary">Install</button>
+						<button type="button" class="btn btn-link" data-toggle="collapse" data-target="#demo">
+							Advanced options
+						</button>
 					</div>
 				</div>
 			</form>
@@ -351,9 +380,12 @@ if (isset($_GET['root'])) {
 	<footer class="container">
 		<hr>
 
-		<small class="pull-right"><a href="https://github.com/lighp/lighp/wiki/Installing_fr">Installation guide</a></small>
+		<small class="pull-right"><a href="https://github.com/lighp/lighp/wiki/Installing_fr" target="_blank">Installation guide</a></small>
 
 		<small><a href="http://lighp.github.io/lighp">Lighp</a> by <a href="http://emersion.fr">Emersion</a></small>
 	</footer>
+
+	<script src="//code.jquery.com/jquery-2.1.1.min.js"></script>
+	<script src="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
 </body>
 </html>
