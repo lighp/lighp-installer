@@ -41,7 +41,7 @@ function tmpPath() {
  * Copy a file, or recursively copy a folder and its contents
  * @param       string   $source    Source path
  * @param       string   $dest      Destination path
- * @param       string   $permissions New folder creation permissions
+ * @param       string   $permissions New files permissions
  * @return      bool     Returns true on success, false on failure
  * @see https://stackoverflow.com/questions/2050859/copy-entire-contents-of-a-directory-to-another-using-php
  */
@@ -53,7 +53,12 @@ function xcopy($source, $dest, $permissions = 0755) {
 
 	// Simple copy for a file
 	if (is_file($source)) {
-		return copy($source, $dest);
+		$result = copy($source, $dest);
+		if ($result === false) {
+			return false;
+		}
+		chmod($dest, $permissions);
+		return true;
 	}
 
 	// Make destination directory
@@ -78,7 +83,7 @@ function xcopy($source, $dest, $permissions = 0755) {
 	return true;
 }
 function xrm($file) {
-	// Simple copy for a file
+	// Simple deletion for a file
 	if (is_file($file)) {
 		return unlink($file);
 	}
@@ -91,7 +96,7 @@ function xrm($file) {
 			continue;
 		}
 
-		// Deep copy directories
+		// Deep delete directories
 		xrm($file.DIRECTORY_SEPARATOR.$entry);
 	}
 
