@@ -167,6 +167,7 @@ $steps = array(
 			mkdir($composerHome);
 
 			putenv('COMPOSER_HOME='.$composerHome);
+			putenv('COMPOSER_LIGHP_FORCE_OVERWRITE=true');
 			exec('php composer.phar -n install', $output, $returnVal);
 
 			if ($returnVal != 0) { // Something went wrong
