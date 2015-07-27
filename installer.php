@@ -82,6 +82,36 @@ function xcopy($source, $dest, $permissions = 0755) {
 	$dir->close();
 	return true;
 }
+
+function xchmod($file, $mode) {
+	// Chmod target file
+	$result = chmod($file, $mode);
+	if ($result === false) {
+		return false;
+	}
+	
+	// If it's a file, we've finished
+	if (is_file($file)) {
+		return true;
+	}
+	
+	// Loop through the folder
+	$dir = dir($file);
+	while (false !== $entry = $dir->read()) {
+		// Skip pointers
+		if ($entry == '.' || $entry == '..') {
+			continue;
+		}
+
+		// Deep chmod directories
+		xchmod($file.DIRECTORY_SEPARATOR.$entry, $mode);
+	}
+
+	// Clean up
+	$dir->close();
+	return true;
+}
+
 function xrm($file) {
 	// Simple deletion for a file
 	if (is_file($file)) {
@@ -210,6 +240,17 @@ $steps = array(
 				throw new Exception('Cannot move .htaccess.new to .htaccess');
 			}
 		}
+	),
+	array(
+		'description' => 'Changing files mode...',
+		'worker' => function () {
+			$dirname = dirname(__FILE__);
+			if (!isset($_GET['chmodInstallation']) || $_GET['chmodInstallation'] != 'on') {
+				return;
+			}
+
+			xchmod($dirname, 0777);
+		}
 	)
 );
 
@@ -337,6 +378,16 @@ if (isset($_GET['root'])) {
 							<div class="checkbox">
 								<label>
 									<input type="checkbox" name="updatePkgs"> Update packages if they are already installed
+								</label>
+							</div>
+						</div>
+					</div>
+					
+					<div class="form-group">
+						<div class="col-sm-offset-2 col-sm-10">
+							<div class="checkbox">
+								<label>
+									<input type="checkbox" name="chmodInstallation" checked> Change Lighp's files mode to 0777 (fixes permissions problems)
 								</label>
 							</div>
 						</div>
