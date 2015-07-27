@@ -73,9 +73,17 @@ function xcopy($source, $dest, $permissions = 0755) {
 		if ($entry == '.' || $entry == '..') {
 			continue;
 		}
+		
+		$childSource = $source.DIRECTORY_SEPARATOR.$entry;
+		$childDest = $dest.DIRECTORY_SEPARATOR.$entry;
+		
+		// Empty destination if it is a directory
+		if (is_dir($childDest)) {
+			xrm($childDest);
+		}
 
 		// Deep copy directories
-		xcopy($source.DIRECTORY_SEPARATOR.$entry, $dest.DIRECTORY_SEPARATOR.$entry);
+		xcopy($childSource, $childDest);
 	}
 
 	// Clean up
