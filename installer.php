@@ -92,6 +92,10 @@ function xcopy($source, $dest, $permissions = 0755) {
 }
 
 function xrm($file) {
+	if (!file_exists($file)) {
+		return false;
+	}
+
 	// Simple deletion for a file
 	if (is_file($file)) {
 		return unlink($file);
@@ -126,9 +130,14 @@ $steps = array(
 			$downloadUrl = $_GET['downloadUrl'];
 			$zipPath = tmpPath();
 			$destPath = dirname(__FILE__);
+			$extractPath = $destPath.DIRECTORY_SEPARATOR.'lighp-master';
 
 			if (copy($downloadUrl, $zipPath) === false) {
 				throw new Exception('Cannot download Lighp');
+			}
+
+			if (file_exists($extractPath)) {
+				xrm($extractPath);
 			}
 
 			$zip = new ZipArchive;
@@ -141,7 +150,6 @@ $steps = array(
 			}
 			$zip->close();
 
-			$extractPath = $destPath.DIRECTORY_SEPARATOR.'lighp-master';
 			xcopy($extractPath, $destPath, 0777);
 			xrm($extractPath);
 
@@ -177,7 +185,7 @@ $steps = array(
 
 			putenv('COMPOSER_HOME='.$composerHome);
 			putenv('COMPOSER_LIGHP_FORCE_OVERWRITE=true');
-			exec('php composer.phar -n install', $output, $returnVal);
+			exec('php composer.phar -n update --prefer-dist', $output, $returnVal);
 
 			if ($returnVal != 0) { // Something went wrong
 				throw new Exception('Cannot install Lighp dependencies ['.$returnVal.']:'."\n".implode("\n", $output));
