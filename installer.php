@@ -164,7 +164,7 @@ $steps = array(
 				return;
 			}
 
-			$downloadUrl = 'https://getcomposer.org/composer.phar';
+			$downloadUrl = 'https://getcomposer.org/composer-1.phar';
 			$destPath = dirname(__FILE__).DIRECTORY_SEPARATOR.'composer.phar';
 
 			if (copy($downloadUrl, $destPath) === false) {
